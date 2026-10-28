@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Building a live 3D earthquake globe with USGS data · Ali Aslami</title>
+  <meta name="description" content="How a static website gets real-time earthquake data, stays smooth while updating, estimates shaking at your location and keeps working offline.">
+  <meta property="og:title" content="Building a live 3D earthquake globe with USGS data">
+  <meta property="og:description" content="Real-time USGS data, three.js, an intensity estimate and offline support, with no backend.">
+  <meta property="og:image" content="https://opengraph.githubassets.com/1/Ali30mhi/earthquake-globe">
+  <meta name="theme-color" content="#0b0f1a">
+  <link rel="icon" href="https://github.com/Ali30mhi.png">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="../">ali<span>30mhi</span></a>
+    <div class="links">
+      <a href="../#projects">Projects</a>
+      <a href="../#writing">Writing</a>
+    </div>
+  </nav>
+
+  <article class="article">
+    <header>
+      <p class="date">October 28, 2026 · 7 min read</p>
+      <h1>Building a live 3D earthquake globe with USGS data</h1>
+      <p class="lead">A static website that shows every earthquake on Earth as it is reported, replays the last day or month, estimates how strongly each one was felt where you are, and keeps working when the internet doesn't. No backend, no API key.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://ali30mhi.github.io/earthquake-globe/">Open the live globe</a>
+        <a class="btn" href="https://github.com/Ali30mhi/earthquake-globe">Source on GitHub</a>
+      </div>
+      <img class="cover" src="https://opengraph.githubassets.com/1/Ali30mhi/earthquake-globe" alt="Live Earthquake Globe on GitHub">
+    </header>
+
+    <h2>Why a globe?</h2>
+    <p>Most earthquake sites show a list or a flat map. A list hides the pattern, and a flat map stretches the places where earthquakes actually cluster, like the edges of the Pacific. On a globe you can spin to any region and immediately see the ring of fire, the Himalayas or the Alborz and Zagros mountains light up.</p>
+    <p>I also set myself one constraint: it had to run as plain static files on GitHub Pages. That ruled out a server, a database and API keys, and pushed every decision into the browser.</p>
+
+    <h2>The data: USGS GeoJSON feeds</h2>
+    <p>The U.S. Geological Survey publishes ready-made GeoJSON feeds that are regenerated every minute and can be fetched straight from the browser. The URL pattern is simple: a minimum magnitude and a time window.</p>
+<pre><code>https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson
+# magnitude: significant | 4.5 | 2.5 | 1.0 | all
+# period:    hour | day | week | month</code></pre>
+    <p>Each earthquake is a GeoJSON feature. The fields I use are the magnitude, the place, the time in milliseconds, a tsunami flag and the coordinates:</p>
+<pre><code>{
+  "id": "...",
+  "properties": { "mag": 5.5, "place": "Reykjanes Ridge", "time": 1793178000000, "tsunami": 0 },
+  "geometry": { "coordinates": [-35.1, 54.2, 10] }
+}</code></pre>
+    <p>One detail that is easy to get wrong: GeoJSON coordinates are <code>[longitude, latitude, depth]</code>, not latitude first. The third value is the depth in kilometers, which turned out to be useful for coloring.</p>
+    <p>For history I use a second USGS service, the FDSN event API. A single request returns every M7+ earthquake since 1900, which became the "major quakes since 1900" layer.</p>
+    <blockquote>Outside the United States, USGS is mainly complete for moderate and larger events. Small local earthquakes are better covered by national networks, so the globe is honest about what it shows: the global picture, not every tremor.</blockquote>
+
+    <h2>Drawing the globe</h2>
+    <p>The 3D part is built on <a href="https://github.com/vasturiano/globe.gl">globe.gl</a>, a layer-based wrapper around three.js. Each earthquake becomes a small column whose height and color depend on its magnitude, and earthquakes from the last hour get animated ripples:</p>
+<pre><code>const globe = new Globe(document.getElementById('globe'))
+  .pointsData(quakes)
+  .pointAltitude(q =&gt; clamp((q.mag + 1) * 0.012, 0.005, 0.18))
+  .pointColor(q =&gt; magColor(q.mag))
+  .ringsData(quakes.filter(q =&gt; Date.now() - q.time &lt; HOUR));</code></pre>
+    <p>For the "where do earthquakes happen" question, individual points are too noisy. Instead, the last 30 days of M2.5+ events are binned into hexagons, and the height of each hexagon shows how active that area was. Switching the same layer to the 1900+ catalogue shows the long-term picture.</p>
+    <p>The maps come in four styles. The realistic one adds relief, reflective oceans and a slowly drifting cloud layer. The satellite and dark styles use map tiles, so they load sharper imagery as you zoom in instead of stretching one big texture.</p>
+
+    <h2>Staying live without flickering</h2>
+    <p>The page polls the feed every 60 seconds. My first version replaced the whole dataset each time, and every point re-animated from the ground up once a minute, which looked broken. The fix was to keep the existing objects and only update them, so the renderer sees the same objects and leaves them alone:</p>
+<pre><code>const prev = new Map(state.quakes.map(q =&gt; [q.id, q]));
+const quakes = parse(geo).map(q =&gt; {
+  const isNew = !state.firstLoad &amp;&amp; !state.seen.has(q.id);
+  state.seen.add(q.id);
+  return Object.assign(prev.get(q.id) || q, q, { isNew });
+});</code></pre>
+    <p>The same set of seen IDs tells me which events are new since the last refresh. Those trigger a notification, an optional sound and, if you want, the camera flies to the epicenter.</p>
+
+    <h2>How strong was it where I am?</h2>
+    <p>Magnitude describes the earthquake; intensity describes the shaking at a place. After you share your location (it never leaves the browser), each event gets a rough intensity estimate using the Bakun &amp; Wentworth relation, based on magnitude and the straight-line distance to the hypocenter:</p>
+<pre><code>const r = Math.hypot(distanceKm, depthKm);   // distance to the hypocenter
+const mmi = 3.67 + 1.17 * magnitude - 3.19 * Math.log10(r);</code></pre>
+    <p>The result is mapped to the Modified Mercalli scale, from "I · Not felt" to "X · Extreme". It ignores local soil and building effects, so the page always labels it as a rough estimate.</p>
+
+    <h2>Replay and the activity chart</h2>
+    <p>The replay mode plays the selected time window, a day or a month, in about 30 seconds. Under the hood it only filters the loaded events by time, so it costs no extra requests. A small bar chart shows activity over time, each bar colored by the strongest event in it, and clicking a bar jumps the replay to that moment.</p>
+
+    <h2>English and Persian</h2>
+    <p>The interface switches between English and Persian, including a full right-to-left layout. Two things made this easier than expected. CSS logical properties like <code>inset-inline-start</code> flip automatically with the text direction. The <code>Intl</code> APIs handle Persian digits and the Persian calendar for free, using the <code>fa-IR</code> locale.</p>
+    <p>One surprise: the 3D text labels on the globe use a typeface without Persian glyphs, so magnitude labels on the globe itself always use Latin digits, while the rest of the interface is fully localized.</p>
+
+    <h2>Working offline</h2>
+    <p>A service worker makes the site installable and usable without internet. Different requests get different strategies: the earthquake data is network-first, so you always get fresh data when online and the last saved copy when not. Map tiles are cache-first, because they never change.</p>
+<pre><code>if (url.hostname === 'earthquake.usgs.gov') networkFirst(request);
+else if (isMapTile(url)) cacheFirst(request);</code></pre>
+    <p>To avoid presenting old data as live, every feed carries a <code>generated</code> timestamp. If it is more than five minutes old, the status switches from "Live" to "Offline · showing saved data".</p>
+
+    <h2>A bug worth sharing</h2>
+    <p>After a large update, the live page got stuck on its loading spinner. The browser console showed <code>$(...) is null</code>: the new JavaScript was looking for buttons that only exist in the new HTML, but the old HTML was still being served. Nothing was wrong with the code itself, only with the deployment. Two lessons: when HTML and JavaScript change together, ship and verify them together, and always open the console before guessing.</p>
+
+    <h2>What's next</h2>
+    <ul>
+      <li>A small ESP32 sensor that streams a live seismogram to the globe. The firmware and the web panel are written, and the hardware is next.</li>
+      <li>An optional second data source for small regional earthquakes.</li>
+      <li>Combining several sensors so that one slammed door can't trigger an alarm.</li>
+    </ul>
+    <p>The whole project is open source under the MIT license. Try the <a href="https://ali30mhi.github.io/earthquake-globe/">live globe</a> or read the <a href="https://github.com/Ali30mhi/earthquake-globe">code on GitHub</a>.</p>
+
+    <p class="credits">Data: USGS Earthquake Hazards Program. 3D: globe.gl and three.js. Intensity: Bakun &amp; Wentworth (1997).</p>
+  </article>
+
+  <footer>Ali Aslami · <a href="../">ali30mhi.github.io</a></footer>
+</body>
+</html>
