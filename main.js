@@ -46,7 +46,7 @@ const PROJECTS = [
 
 const I18N = {
   en: {
-    docTitle: 'Ali Aslami · Student developer',
+    docTitle: 'ali30mhi · Student developer',
     navProjects: 'Projects', navSkills: 'Skills', navWriting: 'Writing', navContact: 'Contact',
     hello: "Hi, I'm", role: 'Student developer',
     bio: 'I like building small, polished tools, mostly things that help students study better. I work mostly with C, Python and Java, and enjoy low-level projects like interpreters.',
@@ -64,10 +64,10 @@ const I18N = {
     post2d: 'A tiny stack-based VM, a REPL and turtle graphics, step by step.',
     contactTitle: 'Get in touch',
     contactText: 'The best place to find me is GitHub. Follow along, star a project, or open an issue if you have an idea.',
-    contactBtn: 'Find me on GitHub', footer: 'Built by Ali Aslami · hosted on GitHub Pages',
+    contactBtn: 'Find me on GitHub', footer: 'Built by ali30mhi · hosted on GitHub Pages',
   },
   fa: {
-    docTitle: 'Ali Aslami · برنامه‌نویس',
+    docTitle: 'ali30mhi · برنامه‌نویس',
     navProjects: 'پروژه‌ها', navSkills: 'مهارت‌ها', navWriting: 'نوشته‌ها', navContact: 'ارتباط',
     hello: 'سلام، من', role: 'دانشجوی برنامه‌نویس',
     bio: 'ابزارهای کوچک و تمیز می‌سازم، بیشتر چیزهایی که به دانشجوها کمک می‌کند بهتر درس بخوانند. بیشتر با C، پایتون و جاوا کار می‌کنم و پروژه‌های سطح پایین مثل مفسرها را دوست دارم.',
@@ -85,7 +85,7 @@ const I18N = {
     post2d: 'یک ماشین مجازی پشته‌ای کوچک، محیط تعاملی و گرافیک لاک‌پشتی، قدم به قدم.',
     contactTitle: 'در ارتباط باشیم',
     contactText: 'بهترین جا برای پیدا کردن من گیت‌هاب است. دنبالم کنید، به پروژه‌ها ستاره بدهید، یا اگر ایده‌ای دارید یک issue باز کنید.',
-    contactBtn: 'من در گیت‌هاب', footer: 'ساخته‌ی Ali Aslami · میزبانی روی GitHub Pages',
+    contactBtn: 'من در گیت‌هاب', footer: 'ساخته‌ی ali30mhi · میزبانی روی GitHub Pages',
   },
 };
 
