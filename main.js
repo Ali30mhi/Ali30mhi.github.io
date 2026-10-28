@@ -8,6 +8,11 @@ const PROJECTS = [
     fa: 'کره‌ی سه‌بعدی زنده‌ی زلزله با داده‌های USGS، سوابق از ۱۹۰۰، رابط فارسی و انگلیسی، حالت آفلاین و یک حسگر لرزه‌ی خانگی با ESP32.',
   },
   {
+    repo: 'tehran-metro-3d', stack: ['JavaScript', 'three.js', 'OpenStreetMap'],
+    en: 'Interactive 3D visualization of the Tehran Metro network on a city map, built with Three.js and OpenStreetMap data.',
+    fa: 'نمایش تعاملی و سه‌بعدی شبکه‌ی مترو تهران روی نقشه‌ی شهر، ساخته‌شده با Three.js و داده‌های OpenStreetMap.',
+  },
+  {
     repo: 'Darsyar', live: 'https://ali30mhi.github.io/Darsyar/', stack: ['HTML', 'CSS', 'JavaScript'],
     en: 'Persian study timer with streaks, a 12-week heatmap and shareable progress cards. One HTML file, no sign-up.',
     fa: 'تایمر مطالعه‌ی فارسی با زنجیره‌ی روزهای مطالعه، نقشه‌ی ۱۲ هفته‌ای و کارت پیشرفت قابل اشتراک. یک فایل HTML، بدون ثبت‌نام.',
