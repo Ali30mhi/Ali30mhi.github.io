@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ali Aslami · Student developer</title>
+  <meta name="description" content="Ali Aslami, a student developer from Tehran building small, polished tools in C, Python, Java and JavaScript.">
+  <meta property="og:title" content="Ali Aslami · Student developer">
+  <meta property="og:description" content="Projects, tools and experiments by Ali Aslami.">
+  <meta property="og:image" content="https://github.com/Ali30mhi.png">
+  <meta name="theme-color" content="#0b0f1a">
+  <link rel="icon" href="https://github.com/Ali30mhi.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vazirmatn/Vazirmatn-font-face.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="#top">ali<span>30mhi</span></a>
+    <div class="links">
+      <a href="#projects" data-i18n="navProjects">Projects</a>
+      <a href="#skills" data-i18n="navSkills">Skills</a>
+      <a href="#writing" data-i18n="navWriting">Writing</a>
+      <a href="#contact" data-i18n="navContact">Contact</a>
+      <button id="lang" class="chip">فا</button>
+    </div>
+  </nav>
+
+  <header id="top" class="hero">
+    <img class="avatar" src="https://github.com/Ali30mhi.png?size=240" alt="Ali Aslami" width="120" height="120">
+    <p class="hello" data-i18n="hello">Hi, I'm</p>
+    <h1>Ali Aslami</h1>
+    <p class="role" data-i18n="role">Student developer · Tehran</p>
+    <p class="bio" data-i18n="bio"></p>
+    <div class="cta">
+      <a class="btn primary" href="#projects" data-i18n="seeProjects">See my projects</a>
+      <a class="btn" href="https://github.com/Ali30mhi" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+    <div class="stats">
+      <div><b id="stRepos">–</b><span data-i18n="stRepos">public repos</span></div>
+      <div><b id="stStars">–</b><span data-i18n="stStars">stars</span></div>
+      <div><b id="stLangs">–</b><span data-i18n="stLangs">languages</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="projects">
+      <h2 data-i18n="projectsTitle">Projects</h2>
+      <p class="sub" data-i18n="projectsSub"></p>
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <section id="skills">
+      <h2 data-i18n="skillsTitle">Skills</h2>
+      <div class="skills">
+        <div class="skill"><h3 data-i18n="skLang">Languages</h3><p>C · Python · Java · JavaScript · HTML/CSS</p></div>
+        <div class="skill"><h3 data-i18n="skTools">Tools</h3><p>Git · Linux · Qt / PySide6 · three.js</p></div>
+        <div class="skill"><h3 data-i18n="skHw">Hardware</h3><p>ESP32 · Arduino · sensors</p></div>
+        <div class="skill"><h3 data-i18n="skInterests">Interests</h3><p data-i18n="interests"></p></div>
+      </div>
+    </section>
+
+    <section id="writing">
+      <h2 data-i18n="writingTitle">Writing</h2>
+      <div class="posts">
+        <article class="post"><span class="tag" data-i18n="soon">Coming soon</span><h3 data-i18n="post1"></h3><p data-i18n="post1d"></p></article>
+        <article class="post"><span class="tag" data-i18n="soon">Coming soon</span><h3 data-i18n="post2"></h3><p data-i18n="post2d"></p></article>
+      </div>
+    </section>
+
+    <section id="contact" class="contact">
+      <h2 data-i18n="contactTitle">Get in touch</h2>
+      <p data-i18n="contactText"></p>
+      <a class="btn primary" href="https://github.com/Ali30mhi" target="_blank" rel="noopener" data-i18n="contactBtn">Find me on GitHub</a>
+    </section>
+  </main>
+
+  <footer><span data-i18n="footer"></span> · <span id="year"></span></footer>
+  <script src="main.js"></script>
+</body>
+</html>
