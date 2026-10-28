@@ -48,7 +48,7 @@ const I18N = {
   en: {
     docTitle: 'Ali Aslami · Student developer',
     navProjects: 'Projects', navSkills: 'Skills', navWriting: 'Writing', navContact: 'Contact',
-    hello: "Hi, I'm", role: 'Student developer · Tehran',
+    hello: "Hi, I'm", role: 'Student developer',
     bio: 'I like building small, polished tools, mostly things that help students study better. I work mostly with C, Python and Java, and enjoy low-level projects like interpreters.',
     seeProjects: 'See my projects', stRepos: 'public repos', stStars: 'stars', stLangs: 'languages',
     projectsTitle: 'Projects', projectsSub: "Things I've built and shipped. Stars and dates load live from GitHub.",
@@ -67,7 +67,7 @@ const I18N = {
   fa: {
     docTitle: 'Ali Aslami · برنامه‌نویس',
     navProjects: 'پروژه‌ها', navSkills: 'مهارت‌ها', navWriting: 'نوشته‌ها', navContact: 'ارتباط',
-    hello: 'سلام، من', role: 'دانشجوی برنامه‌نویس · تهران',
+    hello: 'سلام، من', role: 'دانشجوی برنامه‌نویس',
     bio: 'ابزارهای کوچک و تمیز می‌سازم، بیشتر چیزهایی که به دانشجوها کمک می‌کند بهتر درس بخوانند. بیشتر با C، پایتون و جاوا کار می‌کنم و پروژه‌های سطح پایین مثل مفسرها را دوست دارم.',
     seeProjects: 'پروژه‌هایم را ببینید', stRepos: 'مخزن عمومی', stStars: 'ستاره', stLangs: 'زبان برنامه‌نویسی',
     projectsTitle: 'پروژه‌ها', projectsSub: 'چیزهایی که ساخته و منتشر کرده‌ام. تعداد ستاره‌ها و تاریخ‌ها مستقیم از گیت‌هاب خوانده می‌شود.',
