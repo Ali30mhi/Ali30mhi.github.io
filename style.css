@@ -89,3 +89,27 @@ footer { text-align: center; color: var(--muted); font-size: 13px; padding: 30px
   .stats { flex-wrap: wrap; }
 }
 /* end of style.css */
+/* article-styles */
+.article { max-width: 760px; margin: 0 auto; padding: 48px 20px 80px; }
+.article h1 { font-size: clamp(30px, 5vw, 42px); }
+.article .date { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+.article .lead { font-size: 19px; color: #c9cfdc; }
+.article .cover { width: 100%; border-radius: 14px; border: 1px solid var(--line); margin: 8px 0 12px; }
+.article h2 { font-size: 24px; margin: 40px 0 10px; }
+.article p, .article li { color: #c9cfdc; }
+.article a:not(.btn) { color: var(--a); text-decoration: underline; text-underline-offset: 3px; }
+.article .cta { justify-content: flex-start; }
+.article pre {
+  background: #0f1422; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  overflow-x: auto; font-size: 13.5px; line-height: 1.55; direction: ltr; text-align: left;
+}
+.article code { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; }
+.article p code, .article li code { background: rgba(255, 255, 255, .07); padding: 1px 6px; border-radius: 5px; font-size: .92em; }
+.article blockquote {
+  margin: 18px 0; padding: 10px 16px; border-inline-start: 3px solid var(--a);
+  background: rgba(255, 122, 69, .06); border-radius: 8px; color: #c9cfdc;
+}
+.article .credits { font-size: 13px; color: var(--muted); margin-top: 40px; }
+.post.published { border-style: solid; display: block; transition: transform .2s, border-color .2s; }
+.post.published:hover { transform: translateY(-3px); border-color: rgba(255, 122, 69, .5); }
+.tag.new { background: rgba(52, 199, 89, .15); color: #6ee08f; }
