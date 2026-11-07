@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Writing a Forth interpreter in C · ali30mhi</title>
+  <meta name="description" content="How a single C file compiles Forth into a tiny instruction set, runs it on a small virtual machine, and draws turtle graphics in the terminal with braille characters.">
+  <meta property="og:title" content="Writing a Forth interpreter in C">
+  <meta property="og:description" content="A tiny stack-based VM, a colored REPL and turtle graphics in the terminal, in one C file with no dependencies.">
+  <meta property="og:image" content="https://opengraph.githubassets.com/1/Ali30mhi/forth-interpreter">
+  <meta name="theme-color" content="#0b0f1a">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="https://github.com/Ali30mhi.png">
+  <link rel="stylesheet" href="../style.css?v=3">
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="../">ali<span>30mhi</span></a>
+    <div class="links">
+      <a href="../#projects">Projects</a>
+      <a href="../#writing">Writing</a>
+    </div>
+  </nav>
+
+  <article class="article">
+    <header>
+      <p class="date">November 7, 2026 · 9 min read</p>
+      <h1>Writing a Forth interpreter in C</h1>
+      <p class="lead">One C file, no dependencies: a Forth that compiles each line into a tiny instruction set, runs it on a small virtual machine, shows the stack after every command and draws turtle graphics right in the terminal using braille characters.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/Ali30mhi/forth-interpreter">Source on GitHub</a>
+      </div>
+      <img class="cover" src="https://opengraph.githubassets.com/1/Ali30mhi/forth-interpreter" alt="forth-interpreter on GitHub">
+    </header>
+
+    <h2>Why Forth?</h2>
+    <p>Most languages need a parser, a grammar and a syntax tree before anything runs. Forth needs almost none of that. A program is a list of words separated by spaces. Numbers are pushed onto a stack, and every other word takes its inputs from the stack and leaves its results there:</p>
+<pre><code>3 4 + .              \ prints 7
+: square dup * ;     \ define a new word
+5 square .           \ prints 25</code></pre>
+    <p>That makes it one of the few languages where you can build the whole thing yourself, including variables, loops, recursion and an interactive shell, and still understand every line. It was the perfect excuse to practice the parts of C I find most interesting: memory layout, function pointers and a virtual machine loop.</p>
+    <p>Building it is one command:</p>
+<pre><code>gcc -Wall -Wextra -std=c11 -o forth forth.c
+./forth                 # interactive REPL
+./forth &lt; turtle.fs     # run a script</code></pre>
+
+    <h2>Compile first, then run</h2>
+    <p>The simplest Forth reads a word and executes it immediately. I went one step further: every line is first compiled into an array of instructions, and only then executed by a small virtual machine. Control flow like <code>if</code> and <code>loop</code> becomes plain jumps, and the VM gets one central loop where I can check for errors, Ctrl-C and runaway recursion.</p>
+<pre><code>source line ─► next_token() ─► compile_token() ─► code[] ─► run()</code></pre>
+    <p>The whole instruction set is twelve opcodes, and an instruction is just an opcode plus one argument:</p>
+<pre><code>enum { OP_LIT, OP_PRIM, OP_CALL, OP_EXIT, OP_BRANCH, OP_BRANCH0,
+       OP_DO, OP_LOOP, OP_PLOOP, OP_I, OP_J, OP_DOTQ };
+
+typedef struct { int op; cell arg; } instr;</code></pre>
+    <p><code>OP_LIT</code> pushes a number, <code>OP_PRIM</code> calls a built-in C function, <code>OP_CALL</code> jumps into a user-defined word, and the branch opcodes implement every control structure. Everything else in the language is built on top of these.</p>
+    <p>Code lives in one array with two regions. The first holds colon definitions, which stay forever. The area after it is a scratch buffer: a line typed at the prompt is compiled there, run once, and then thrown away. A nice side effect is that loops and <code>if</code> work at the prompt too, not only inside definitions:</p>
+<pre><code>static instr code[CODE_MAX + SCRATCH_MAX];
+static int here  = 0;          /* next free slot for definitions */
+static int shere = CODE_MAX;   /* next free slot for the current line */</code></pre>
+
+    <h2>The dictionary</h2>
+    <p>Every word lives in a dictionary entry with a name, a kind and one value. For a built-in it is an index into the table of C functions, for a colon definition it is the address of its first instruction, for a variable it is its slot in memory, and for a constant it is the value itself:</p>
+<pre><code>enum { K_PRIM, K_COLON, K_VAR, K_CONST };
+
+typedef struct {
+    char name[NAME_LEN + 1];
+    int kind;
+    cell val;
+} dict_entry;</code></pre>
+    <p>Lookups search from the newest entry backwards, so redefining a word simply shadows the old one, which is how Forth is supposed to behave. Variables and constants both compile to <code>OP_LIT</code>: a constant pushes its value, a variable pushes its address, and <code>@</code> and <code>!</code> read and write through it. The eight color names are just constants added at startup, which is why <code>red color</code> works without any special syntax.</p>
+    <p>The built-ins come from one table that pairs each name with its C function and a short stack comment. That single table fills the dictionary, prints the <code>words</code> list and answers <code>help &lt;word&gt;</code>, so the documentation can't drift away from the code:</p>
+<pre><code>{ "dup",  p_dup,  "( a -- a a )        copy the top item" },
+{ "swap", p_swap, "( a b -- b a )      swap the top two" },
+{ "fd",   p_forward, "( n -- )         turtle: same as forward" },</code></pre>
+
+    <h2>The virtual machine</h2>
+    <p>The VM is a single <code>switch</code> inside a loop. Calls push the return address onto a separate return stack, and <code>OP_EXIT</code> pops it:</p>
+<pre><code>static void run(int ip) {
+    int rbase = rp;
+    while (!err &amp;&amp; !want_exit) {
+        if (interrupted) { interrupted = 0; forth_error("interrupted"); break; }
+        instr in = code[ip++];
+        switch (in.op) {
+        case OP_LIT:  push(in.arg); break;
+        case OP_PRIM: PRIMS[in.arg].fn(); break;
+        case OP_CALL:
+            if (rp &gt;= RSTACK_MAX) { forth_error("return stack overflow (recursion too deep?)"); break; }
+            rs[rp++] = ip;
+            ip = (int)in.arg;
+            break;
+        case OP_EXIT:
+            if (rp == rbase) return;
+            ip = rs[--rp];
+            break;
+        case OP_BRANCH:  ip = (int)in.arg; break;
+        case OP_BRANCH0: if (!need(1)) break; if (pop() == 0) ip = (int)in.arg; break;
+        /* ... loops, i, j, ." ... */
+        }
+    }
+}</code></pre>
+    <p>Because the return stack is my own array and not the C call stack, infinite recursion ends with a clear error message after 1024 levels instead of a segmentation fault. And because every instruction passes through the same loop, a single flag is enough to stop a program.</p>
+
+    <h2>Compiling control flow</h2>
+    <p>The interesting part of the compiler is turning <code>if ... else ... then</code> and loops into jumps. When the compiler sees <code>if</code>, it doesn't know yet where to jump, so it emits a <code>BRANCH0</code> with an empty target and remembers its address on a small control-flow stack. When <code>then</code> arrives, it goes back and fills in the target. This is called backpatching:</p>
+<pre><code>if (is(tok, "if")) {
+    a = compile_op(OP_BRANCH0, 0);   /* target unknown yet */
+    if (a &gt;= 0) cf_push(CF_IF, a);
+    return;
+}
+if (is(tok, "then")) {
+    if (!(e = cf_expect(CF_IF, CF_ELSE, "then", "if"))) return;
+    code[e-&gt;addr].arg = *cpos;       /* patch it now */
+    cfp--;
+    return;
+}</code></pre>
+    <p>For example, this word replaces negative numbers with zero:</p>
+<pre><code>: clamp0 dup 0&lt; if drop 0 then ;
+
+0  PRIM    dup
+1  PRIM    0&lt;
+2  BRANCH0 5      ← filled in when "then" was reached
+3  PRIM    drop
+4  LIT     0
+5  EXIT</code></pre>
+    <p><code>else</code> emits an unconditional jump, patches the <code>if</code> to land right after it, and leaves its own jump waiting for <code>then</code>. Loops go the other way: <code>begin</code> just records the current address, and <code>until</code> compiles a <code>BRANCH0</code> back to it, so there is nothing to patch. <code>while ... repeat</code> combines both ideas. The control-flow stack also records which kind of structure is open, so a stray <code>then</code> or a <code>repeat</code> without <code>begin</code> produces a readable error instead of broken code.</p>
+    <p>Counted loops use a third stack. Real Forth systems keep loop counters on the return stack, but a separate stack of <code>{index, limit}</code> frames made <code>i</code> and <code>j</code> trivial: <code>i</code> reads the top frame and <code>j</code> the one below it. One detail I kept from standard Forth: <code>do</code> always runs its body at least once, so <code>0 0 do ... loop</code> runs once. That is exactly why real Forths also have <code>?do</code>.</p>
+
+    <h2>The catch with compiling first</h2>
+    <p>Compiling a whole line before running it has one surprising consequence. In <code>42 constant answer</code>, the <code>42</code> has only been compiled, not executed, when the compiler reaches <code>constant</code>, so there is nothing on the stack yet. The fix is to run whatever has been compiled so far before defining the constant:</p>
+<pre><code>if (is(tok, "constant")) {
+    flush_toplevel();   /* the value must be on the stack now */
+    ...
+    dict_add(name, K_CONST, pop());
+}</code></pre>
+    <p><code>:</code> does the same thing, so a line like <code>1 2 + . : foo ... ;</code> behaves the way you would expect.</p>
+
+    <h2>Arithmetic that doesn't lie</h2>
+    <p>C's <code>/</code> rounds toward zero, but this Forth uses floored division, where the remainder always has the sign of the divisor. With C you get <code>-7 / 3 = -2</code> and a remainder of <code>-1</code>. Here <code>-7 3 / .</code> prints <code>-3</code> and <code>-7 3 mod .</code> prints <code>2</code>, which is what you want for things like wrapping angles. The correction is two lines:</p>
+<pre><code>cell qq = a / b, rr = a % b;
+if (rr != 0 &amp;&amp; ((rr &lt; 0) != (b &lt; 0))) { qq--; rr += b; }</code></pre>
+    <p>Signed overflow is undefined behavior in C, so <code>+</code>, <code>-</code> and <code>*</code> are done on unsigned values and cast back, which simply wraps around. Dividing the smallest <code>long</code> by <code>-1</code>, the one division that can crash a program, is handled as a special case.</p>
+
+    <h2>Errors that don't crash</h2>
+    <p>Every primitive starts by checking that the stack holds enough items, so <code>+</code> on an empty stack prints <code>stack underflow</code> instead of reading garbage. <code>@</code> and <code>!</code> check that the address actually belongs to a variable. Only the first error on a line is reported, so one mistake doesn't produce a wall of follow-up messages.</p>
+    <p>When an error happens halfway through a definition, the half-built word is rolled back: the dictionary and the code pointer are reset to where they were before the <code>:</code>. In scripts, errors include the line number and the program exits with status 1, so <code>./forth &lt; file.fs</code> can be used in a shell script or a test.</p>
+
+    <h2>A friendly REPL</h2>
+    <p>I wanted the REPL to feel like a teaching tool. After every line it prints the stack, so you can see exactly what each word did:</p>
+<pre><code>forth&gt; 3 4
+  &lt;2&gt; [ 3 4 ]
+forth&gt; + dup
+  &lt;2&gt; [ 7 7 ]
+forth&gt; : fact dup 1 &gt; if dup 1 - fact * else drop 1 then ;
+forth&gt; 10 fact .
+3628800
+  &lt;2&gt; [ 7 7 ]</code></pre>
+    <p>While a definition or an <code>if</code> is still open, the prompt changes to <code>...&gt;</code>, so multi-line definitions are easy to type. <code>help</code> gives a short tour, <code>help &lt;word&gt;</code> shows a word's stack effect, and <code>words</code> lists your own words separately from the built-ins. Colors are only used when both input and output are a terminal, so piping a script into the interpreter produces clean text.</p>
+    <p>Ctrl-C was more subtle than expected. Inside a signal handler you can only safely do very little, so the handler just sets a flag that the VM checks before each instruction. An endless <code>begin again</code> loop stops with an <code>interrupted</code> message and you're back at the prompt. At an empty prompt, Ctrl-C quits, using <code>write()</code> instead of <code>printf()</code>, because <code>printf</code> is not safe to call from a signal handler.</p>
+
+    <h2>Turtle graphics in the terminal</h2>
+    <p>Logo-style turtle graphics are the most fun way to play with loops, but I didn't want a window or a graphics library. The trick is Unicode braille. The block starting at <code>U+2800</code> contains every combination of a 2×4 grid of dots, one bit per dot, so each terminal character can show eight pixels:</p>
+<pre><code>static const unsigned char BRAILLE_BIT[4][2] = {
+    { 0x01, 0x08 }, { 0x02, 0x10 }, { 0x04, 0x20 }, { 0x40, 0x80 }
+};
+/* character = U+2800 + the bits of the dots that are set */</code></pre>
+    <p>The canvas is 240×240 dots, which is 120×60 characters. Moving the turtle draws a line with Bresenham's algorithm, which only needs integer additions. When the canvas is printed, each 2×4 block becomes one braille character, encoded to UTF-8 by hand, and only the area that actually contains ink is printed.</p>
+    <p>The turtle follows Logo's conventions: it starts in the middle, heading 0 points up, and turning right is clockwise. That means moving forward is <code>x += n·sin(heading)</code> and <code>y += n·cos(heading)</code>. To keep the build command free of <code>-lm</code>, sine is a short Taylor series on whole degrees, after reducing the angle to the range −180 to 180 where the series converges quickly.</p>
+<pre><code>cs yellow color 5 0 do 80 fd 144 rt loop    \ a yellow star</code></pre>
+    <p>The star works because 5 turns of 144° add up to 720°: the turtle goes around twice and comes back to where it started. Colors have one limitation that comes straight from the terminal: a character cell can only have one foreground color, so where two colored lines pass through the same cell, the last one wins.</p>
+
+    <h2>What's missing</h2>
+    <p>This is a small Forth, not a standard one. There are no strings beyond <code>."</code>, no <code>leave</code> or <code>?do</code>, no floating point and no file access. The biggest missing piece is <code>create ... does&gt;</code>, the feature that lets Forth programmers define their own defining words. It needs a real memory model where code and data share one address space, while here variables live in a separate array of cells.</p>
+
+    <h2>What I learned</h2>
+    <ul>
+      <li>Backpatching is a small idea that makes control flow almost free once you have jumps.</li>
+      <li>Keeping the call stack inside the VM turns crashes into error messages.</li>
+      <li>Defining a language's behavior precisely, like floored division or <code>do</code> running at least once, is a big part of writing an interpreter.</li>
+      <li>One table that drives the dictionary, the help and the word list keeps everything in sync.</li>
+    </ul>
+    <p>The whole project is open source under the GPL-3.0 license. Clone it, run <code>./forth &lt; turtle.fs</code>, or read the <a href="https://github.com/Ali30mhi/forth-interpreter">code on GitHub</a>.</p>
+
+    <p class="credits">Further reading: Leo Brodie, Starting Forth and Thinking Forth. Graphics: Unicode braille patterns (U+2800–U+28FF) and Bresenham's line algorithm.</p>
+  </article>
+
+  <footer>ali30mhi · <a href="../">ali30mhi.github.io</a></footer>
+</body>
+</html>
