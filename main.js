@@ -8,6 +8,11 @@ const PROJECTS = [
     fa: 'کره‌ی سه‌بعدی زنده‌ی زلزله با داده‌های USGS، سوابق از ۱۹۰۰، رابط فارسی و انگلیسی، حالت آفلاین و یک حسگر لرزه‌ی خانگی با ESP32.',
   },
   {
+    repo: 'rahyab', stack: ['Go', 'CLI'],
+    en: 'One command to make pip, npm, go and docker work in Iran: tests mirrors with real requests, skips outdated ones and switches safely, with undo.',
+    fa: 'یک دستور تا pip، npm، go و docker در ایران دوباره کار کنند: میرورها را با درخواست واقعی تست می‌کند، میرورهای قدیمی را کنار می‌گذارد و با امکان undo تنظیم می‌کند.',
+  },
+  {
     repo: 'tehran-metro-3d', stack: ['JavaScript', 'three.js', 'OpenStreetMap'],
     en: 'Interactive 3D visualization of the Tehran Metro network on a city map, built with Three.js and OpenStreetMap data.',
     fa: 'نمایش تعاملی و سه‌بعدی شبکه‌ی مترو تهران روی نقشه‌ی شهر، ساخته‌شده با Three.js و داده‌های OpenStreetMap.',
